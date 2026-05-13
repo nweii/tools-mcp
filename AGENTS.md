@@ -50,3 +50,13 @@ curl -s -H "Authorization: Bearer $MCP_STATIC_BEARER_TOKEN" \
 - Secrets never live in this repo — only in `.env` (gitignored), Docker env, or the host's environment
 - Each tool returns either text content or structured JSON, never plain CLI stderr — surface errors via `isError: true` with a humanized message
 - Mirror `obsidian-remote-mcp` patterns wherever possible — same auth module, same Docker shape, same env naming style
+
+## Install policy
+
+`bunfig.toml` gates installs. Don't remove it.
+
+- New package versions younger than 3 days aren't eligible — defends against malicious-publish supply-chain attacks (the May 2026 npm incident and its family).
+- `frozenLockfile = true` — commit `bun.lock` and never run `--no-frozen-lockfile` unless you have a reason.
+- `exact = true` — `bun add <pkg>` saves the version without a caret.
+
+**CVE response** — when a patch lands inside the 3-day window and you need it now, add the package to `minimumReleaseAgeExclude` in `bunfig.toml`, run `bun install`, then revert the exclude in the same diff. The git history of the override is the audit trail.
