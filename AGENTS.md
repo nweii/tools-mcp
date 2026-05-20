@@ -2,8 +2,8 @@
 
 This repo is a **personal MCP toolkit** that exposes tools to remote MCP clients (Claude.ai etc.) over HTTPS. Tools fall into two shapes:
 
-- **CLI wrappers** — shell out to a local binary (`@steipete/bird`, etc.)
-- **API wrappers** — call a remote REST API directly (Perplexity, etc.)
+- **CLI wrappers** — shell out to a local binary
+- **API wrappers** — call a remote REST API directly
 
 Both live as modules under `src/tools/`. Pick the shape that matches what you're exposing.
 
@@ -64,13 +64,13 @@ curl -s -H "Authorization: Bearer $MCP_STATIC_BEARER_TOKEN" \
 - Files start with `// ABOUTME: <one-liner>`
 - Secrets never live in this repo — only in `.env` (gitignored), Docker env, or the host's environment
 - Each tool returns either text content or structured JSON, never plain CLI stderr — surface errors via `isError: true` with a humanized message
-- Mirror `obsidian-remote-mcp` patterns wherever possible — same auth module, same Docker shape, same env naming style
+- Mirror [nweii/obsidian-remote-mcp](https://github.com/nweii/obsidian-remote-mcp) patterns wherever possible — same auth module, same Docker shape, same env naming style
 
 ## Install policy
 
 `bunfig.toml` gates installs. Don't remove it.
 
-- New package versions younger than 3 days aren't eligible — defends against malicious-publish supply-chain attacks (the May 2026 npm incident and its family).
+- New package versions younger than 3 days aren't eligible — defends against malicious-publish supply-chain attacks.
 - `frozenLockfile = true` — commit `bun.lock` and never run `--no-frozen-lockfile` unless you have a reason.
 - `exact = true` — `bun add <pkg>` saves the version without a caret.
 
