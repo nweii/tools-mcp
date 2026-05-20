@@ -1,4 +1,4 @@
-# nweii-tools-mcp
+# tools-mcp
 
 A self-hosted [MCP](https://modelcontextprotocol.io) server that exposes personal tools — wrapped local CLIs and remote APIs — to MCP clients (Claude.ai, Claude Code, etc.) over HTTPS.
 
@@ -45,8 +45,8 @@ Calls the [Perplexity REST API](https://docs.perplexity.ai/) directly. Requires 
 ## Quick start (local)
 
 ```bash
-git clone git@github.com:nweii/nweii-tools-mcp.git
-cd nweii-tools-mcp
+git clone git@github.com:nweii/tools-mcp.git
+cd tools-mcp
 bun install
 cp .env.example .env
 # edit .env and fill in BIRD_AUTH_TOKEN, BIRD_CT0, MCP_CLIENT_ID

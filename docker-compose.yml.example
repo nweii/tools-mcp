@@ -1,5 +1,5 @@
 services:
-  nweii-tools-mcp:
+  tools-mcp:
     image: oven/bun:1
     working_dir: /app
     restart: unless-stopped
@@ -12,6 +12,7 @@ services:
       PORT: 3457
       BIRD_AUTH_TOKEN: ${BIRD_AUTH_TOKEN}              # set in your .env or Portainer stack env
       BIRD_CT0: ${BIRD_CT0}
+      PERPLEXITY_API_KEY: ${PERPLEXITY_API_KEY}
       # TOKEN_STORE_PATH: /app/data/tokens.json        # uncomment to persist OAuth tokens
     volumes:
       - ./:/app

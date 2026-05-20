@@ -1,10 +1,10 @@
 {
-  "name": "nweii-tools-mcp",
+  "name": "tools-mcp",
   "version": "0.1.0",
   "type": "module",
   "private": true,
   "packageManager": "bun@1.3.11",
-  "description": "Personal MCP toolkit — wraps local CLIs (bird, …) as MCP tools for remote use from Claude.ai and other MCP clients.",
+  "description": "Personal MCP toolkit — exposes wrapped local CLIs and remote APIs (bird, Perplexity, …) as MCP tools for remote use from Claude.ai and other MCP clients.",
   "scripts": {
     "start": "bun run src/server.ts",
     "dev": "bun --watch run src/server.ts"

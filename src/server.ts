@@ -6,7 +6,7 @@ const PORT = parseInt(process.env.PORT ?? '3457', 10);
 const app = createApp();
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`nweii-tools-mcp listening on port ${PORT}`);
+  console.log(`tools-mcp listening on port ${PORT}`);
 });
 
 process.on('SIGTERM', () => {

@@ -32,8 +32,8 @@ async function callApi(endpoint: string, body: Record<string, unknown>, stream =
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${getApiKey()}`,
-        'User-Agent': `nweii-tools-mcp/${VERSION}`,
-        'X-Source': 'nweii-tools-mcp',
+        'User-Agent': `tools-mcp/${VERSION}`,
+        'X-Source': 'tools-mcp',
       },
       body: JSON.stringify(stream ? { ...body, stream: true } : body),
       signal: controller.signal,

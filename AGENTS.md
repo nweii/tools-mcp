@@ -1,4 +1,4 @@
-# Agent guidance — nweii-tools-mcp
+# Agent guidance — tools-mcp
 
 This repo is a **personal MCP toolkit** that exposes tools to remote MCP clients (Claude.ai etc.) over HTTPS. Tools fall into two shapes:
 

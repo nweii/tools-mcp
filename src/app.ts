@@ -58,7 +58,7 @@ function setCorsHeaders(req: Request, res: Response): boolean {
   return true;
 }
 
-const SERVER_NAME = 'nweii-tools-mcp';
+const SERVER_NAME = 'tools-mcp';
 const SERVER_VERSION = '0.1.0';
 
 export function createApp(): Express {

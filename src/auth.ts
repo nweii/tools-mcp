@@ -7,7 +7,7 @@ const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const CODE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 
 const TOKEN_STORE_PATH = process.env.TOKEN_STORE_PATH ?? './tokens.json';
-const SERVER_DISPLAY_NAME = process.env.MCP_SERVER_DISPLAY_NAME ?? 'nweii-tools-mcp';
+const SERVER_DISPLAY_NAME = process.env.MCP_SERVER_DISPLAY_NAME ?? 'tools-mcp';
 
 // In-memory stores
 const tokens = new Map<string, number>();
