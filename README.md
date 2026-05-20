@@ -1,8 +1,8 @@
 # nweii-tools-mcp
 
-A self-hosted [MCP](https://modelcontextprotocol.io) server that wraps personal CLIs as MCP tools, so remote clients (Claude.ai, Claude Code, etc.) can use them over HTTPS.
+A self-hosted [MCP](https://modelcontextprotocol.io) server that exposes personal tools — wrapped local CLIs and remote APIs — to MCP clients (Claude.ai, Claude Code, etc.) over HTTPS.
 
-This is a **personal toolkit** — modular by design. Each wrapped CLI lives in its own module under `src/tools/`. The first module wraps [`@steipete/bird`](https://www.npmjs.com/package/@steipete/bird) for X/Twitter.
+This is a **personal toolkit** — modular by design. Each tool surface lives in its own module under `src/tools/`. Current modules wrap [`@steipete/bird`](https://www.npmjs.com/package/@steipete/bird) for X/Twitter and the [Perplexity AI API](https://docs.perplexity.ai/) for web-grounded search, ask, research, and reasoning.
 
 ## Why
 
@@ -23,6 +23,17 @@ Some CLIs only work where they're installed (because of cookies, auth files, loc
 | `bird_bookmarks` | Read your bookmarks (JSON) |
 | `bird_post_tweet` | **Write.** Post a tweet |
 | `bird_reply` | **Write.** Reply to a tweet |
+
+### Perplexity (web-grounded AI)
+
+Calls the [Perplexity REST API](https://docs.perplexity.ai/) directly. Requires `PERPLEXITY_API_KEY` in the server env. All four tools are read-only and billed to that key.
+
+| Tool | Description |
+|------|-------------|
+| `perplexity_search` | Ranked search results (title, URL, snippet, date) — no AI synthesis |
+| `perplexity_ask` | Quick web-grounded answer with citations (`sonar-pro`) |
+| `perplexity_research` | Deep multi-source research (`sonar-deep-research`, 30s+ per call) |
+| `perplexity_reason` | Step-by-step reasoning with web grounding (`sonar-reasoning-pro`) |
 
 ## Security
 
