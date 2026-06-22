@@ -2,7 +2,7 @@
 
 A modular MCP server that exposes wrapped local CLIs and remote APIs to MCP clients like Claude.ai and Claude Code over HTTPS.
 
-Each tool surface lives in its own module under `src/tools/`. The current modules wrap [`@steipete/bird`](https://www.npmjs.com/package/@steipete/bird) for X/Twitter and the [Perplexity API](https://docs.perplexity.ai/) for web-grounded search and reasoning.
+Each tool surface lives in its own module under `src/tools/`. The current modules wrap [`@steipete/bird`](https://www.npmjs.com/package/@steipete/bird) for X/Twitter, the [Perplexity API](https://docs.perplexity.ai/) for web-grounded search and reasoning, and [Cloudflare Browser Rendering](https://developers.cloudflare.com/browser-run/) for headless-browser page capture.
 
 ## Why
 
@@ -35,12 +35,27 @@ Calls the [Perplexity REST API](https://docs.perplexity.ai/) directly. Requires 
 | `perplexity_research` | Deep multi-source research (`sonar-deep-research`, 30s+ per call) |
 | `perplexity_reason` | Step-by-step reasoning with web grounding (`sonar-reasoning-pro`) |
 
+## Browser (Cloudflare Browser Rendering)
+
+Calls the [Browser Rendering REST API](https://developers.cloudflare.com/browser-run/quick-actions/) directly — a headless browser in Cloudflare's cloud, so any client (including ones with no local browser) can render a page, screenshot it, or extract structure. Requires `CLOUDFLARE_ACCOUNT_ID` and a `CLOUDFLARE_API_TOKEN` with the **Browser Rendering — Edit** permission. All tools are read-only and bill to that account's browser-time quota (free plan: 10 min/day, 3 concurrent browsers).
+
+| Tool | Description |
+|------|-------------|
+| `browser_markdown` | Render a page (post-JavaScript) and return clean Markdown |
+| `browser_content` | Render a page and return its full HTML |
+| `browser_screenshot` | Capture a screenshot, returned as an image |
+| `browser_scrape` | Extract elements matching CSS selectors |
+| `browser_links` | Extract all links from a page |
+| `browser_snapshot` | Multiple formats in one call (HTML, screenshot, Markdown, accessibility tree) — one browser-time charge |
+
+Because billing is on browser time, the cheapest patterns are `browser_snapshot` (several formats per render) and passing `rejectResourceTypes` (e.g. `["image","font"]`) to cut render time. The page targeted by these tools must be reachable from the public internet — Cloudflare's browser cannot reach `localhost`.
+
 ## Security
 
 - OAuth 2.1 + PKCE at `/authorize` and `/oauth/token` (compatible with Claude.ai's connector flow)
 - Static bearer token (`MCP_STATIC_BEARER_TOKEN`) for clients that bypass the browser flow
 - CORS allowlisting via `CORS_ALLOWED_ORIGINS`
-- Bird cookies and the Perplexity API key live only in the server's environment, never in this repo
+- Bird cookies, the Perplexity API key, and the Cloudflare API token live only in the server's environment, never in this repo
 
 ## Quick start (local)
 
