@@ -1,7 +1,7 @@
-// ABOUTME: HTTP contract pins for bearer-token persistence across a real server restart. Because the
-// token store and its file path are module-level singletons, persistence can only be observed
-// faithfully across a genuine process boundary — so this suite spawns the actual server entry point,
-// exercises it over HTTP, restarts it against the same store file, and never imports any internals.
+// ABOUTME: HTTP contract pins for bearer-token persistence across a real server restart. The kit's
+// token store persists to a file on issuance and loads it at construction; observing that faithfully
+// needs a genuine process boundary — so this suite spawns the actual server entry point, exercises it
+// over HTTP, restarts it against the same store file, and never imports any internals.
 //
 // The spawned processes run with the test-mode flag OFF (unlike the in-process suites) so the
 // startup token load actually runs; that load is the behavior under test here.
@@ -37,8 +37,17 @@ function freePort(): Promise<number> {
 }
 
 // Launch src/server.ts on `port` against the shared store, with test mode off so tokens load at boot.
+// An approval password guards /authorize (createAuth refuses to construct unguarded); the issue flow
+// below supplies it.
 async function startServer(port: number): Promise<string> {
-  const env = { ...process.env, PORT: String(port), TOKEN_STORE_PATH: storePath, MCP_CLIENT_ID: 'test-client', MCP_BASE_URL: `http://localhost:${port}` };
+  const env = {
+    ...process.env,
+    PORT: String(port),
+    TOKEN_STORE_PATH: storePath,
+    MCP_CLIENT_ID: 'test-client',
+    MCP_BASE_URL: `http://localhost:${port}`,
+    APPROVAL_PASSWORD: 'sekret',
+  };
   delete env.TOOLS_MCP_TEST;
   const child = Bun.spawn(['bun', 'run', 'src/server.ts'], { cwd: process.cwd(), env, stdout: 'ignore', stderr: 'ignore' });
   children.push(child);
@@ -47,7 +56,9 @@ async function startServer(port: number): Promise<string> {
   const deadline = Date.now() + 8000;
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${base}/healthz`);
+      // Discovery is unauthenticated and served once the SDK auth router is mounted — a good readiness
+      // probe now that /health is bearer-gated.
+      const res = await fetch(`${base}/.well-known/oauth-authorization-server`);
       if (res.status === 200) return base;
     } catch {
       // not listening yet
@@ -80,10 +91,12 @@ async function issueToken(base: string): Promise<string> {
       redirect_uri: REDIRECT,
       code_challenge: challenge,
       code_challenge_method: 'S256',
+      password: 'sekret',
     }),
   });
   const code = new URL(authRes.headers.get('location')!).searchParams.get('code')!;
-  const tokRes = await fetch(`${base}/oauth/token`, {
+  // Re-pin (delta: token endpoint /oauth/token → /token).
+  const tokRes = await fetch(`${base}/token`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({

@@ -6,8 +6,10 @@ services:
     environment:
       MCP_BASE_URL: https://tools-mcp.example.com
       MCP_CLIENT_ID: your-client-id
-      MCP_CLIENT_SECRET: your-client-secret           # optional
+      APPROVAL_PASSWORD: your-approval-password        # guards /authorize — required unless MCP_CLIENT_SECRET or APPROVAL_OPEN is set (server refuses to boot unguarded)
+      MCP_CLIENT_SECRET: ""                            # optional; also satisfies the /authorize guard
       MCP_STATIC_BEARER_TOKEN: ""                      # optional, generate with: openssl rand -hex 32
+      HEALTH_TOKEN: ""                                 # optional; set to enable the bearer-gated /health probe
       CORS_ALLOWED_ORIGINS: https://claude.ai
       PORT: 3457
       BIRD_AUTH_TOKEN: ${BIRD_AUTH_TOKEN}              # set in your .env or Portainer stack env

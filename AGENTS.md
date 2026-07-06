@@ -9,12 +9,15 @@ Both live as modules under `src/tools/`. Pick the shape that matches what you're
 
 ## Architecture
 
-- `src/server.ts` — process entry; listens on PORT
-- `src/app.ts` — Express app: CORS, OAuth endpoints, MCP transport
-- `src/auth.ts` — OAuth 2.1 + PKCE + static bearer token middleware (mirrors `obsidian-remote-mcp`)
+The server plumbing (CORS, request logging, the bearer-gated `/health`, the SDK-backed OAuth surface, the stateless `/mcp` mount, tool-result helpers, and process/shutdown handling) comes from the shared [`mcp-server-kit`](https://github.com/nweii/mcp-server-kit). This repo supplies only the tool modules and the wiring that maps its env vars to kit config.
+
+- `src/server.ts` — process entry; builds the app and starts it with the kit's `startServer` (persists tokens on shutdown)
+- `src/app.ts` — maps env vars to `createAuth` / `createApp` from the kit and registers the tools; returns `{ app, auth }`
 - `src/exec.ts` — small subprocess helper (`runCli`, `parseJsonOutput`, `CliError`) for the CLI-wrapper shape
 - `src/tools.ts` — registers all tool modules onto the McpServer
-- `src/tools/<name>.ts` — one module per tool surface (CLI or API)
+- `src/tools/<name>.ts` — one module per tool surface (CLI or API); tools return the kit's `textResult` / `jsonResult` / `errorResult` shapes
+
+The OAuth wire surface (discovery, endpoint paths, error shapes) is whatever the MCP SDK emits — notably the token endpoint is `/token`. `createAuth` refuses to construct when `/authorize` is unguarded; set one of `APPROVAL_PASSWORD`, `MCP_CLIENT_SECRET`, or `APPROVAL_OPEN=true`.
 
 ## Adding a new tool module
 
@@ -46,8 +49,10 @@ API shape only:
 Run locally with cookies in env:
 
 ```bash
-BIRD_AUTH_TOKEN=… BIRD_CT0=… MCP_CLIENT_ID=dev MCP_STATIC_BEARER_TOKEN=$(openssl rand -hex 32) bun run start
+BIRD_AUTH_TOKEN=… BIRD_CT0=… MCP_CLIENT_ID=dev APPROVAL_OPEN=true MCP_STATIC_BEARER_TOKEN=$(openssl rand -hex 32) bun run start
 ```
+
+(`APPROVAL_OPEN=true` satisfies the `/authorize` guard for local use; in production set `APPROVAL_PASSWORD` or `MCP_CLIENT_SECRET` instead.)
 
 Then call MCP directly:
 
@@ -64,7 +69,7 @@ curl -s -H "Authorization: Bearer $MCP_STATIC_BEARER_TOKEN" \
 - Files start with `// ABOUTME: <one-liner>`
 - Secrets never live in this repo — only in `.env` (gitignored), Docker env, or the host's environment
 - Each tool returns either text content or structured JSON, never plain CLI stderr — surface errors via `isError: true` with a humanized message
-- Mirror [nweii/obsidian-remote-mcp](https://github.com/nweii/obsidian-remote-mcp) patterns wherever possible — same auth module, same Docker shape, same env naming style
+- The auth surface, health probe, and `/mcp` mount come from [`mcp-server-kit`](https://github.com/nweii/mcp-server-kit) — change that behavior there, not here; this repo only maps env vars to kit config and adds tool modules
 
 ## Install policy
 

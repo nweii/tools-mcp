@@ -1,6 +1,7 @@
 // ABOUTME: Registers MCP tools that wrap the @steipete/bird CLI for X/Twitter — read, search, mentions, bookmarks, thread, post, reply.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { textResult, jsonResult, errorResult } from 'mcp-server-kit';
 import { CliError, parseJsonOutput, runCli } from '../exec.js';
 
 const BIRD_BIN = process.env.BIRD_BIN ?? './node_modules/.bin/bird';
@@ -34,33 +35,14 @@ async function runBirdText(extra: readonly string[]): Promise<string> {
   return stdout.trim();
 }
 
-function toJsonResult(data: unknown) {
-  const text = JSON.stringify(data, null, 2);
-  // MCP requires structuredContent to be a JSON object, not an array or primitive.
-  // Wrap arrays so callers can still read parsed data structurally.
-  const structured: Record<string, unknown> | undefined = Array.isArray(data)
-    ? { items: data }
-    : data && typeof data === 'object'
-      ? (data as Record<string, unknown>)
-      : undefined;
-  return {
-    content: [{ type: 'text' as const, text }],
-    ...(structured ? { structuredContent: structured } : {}),
-  };
-}
-
-function toTextResult(text: string) {
-  return { content: [{ type: 'text' as const, text }] };
-}
-
-function errorResult(err: unknown) {
-  const msg =
-    err instanceof CliError
-      ? `bird failed (exit ${err.exitCode ?? 'n/a'})\n${err.stderr.trim() || err.stdout.trim() || err.message}`
-      : err instanceof Error
-        ? err.message
-        : String(err);
-  return { content: [{ type: 'text' as const, text: msg }], isError: true };
+// bird surfaces a CLI's non-zero exit with its stderr, which the generic errorResult would drop; keep
+// that domain-specific message and hand the finished text to the kit helper.
+function birdErrorText(err: unknown): string {
+  return err instanceof CliError
+    ? `bird failed (exit ${err.exitCode ?? 'n/a'})\n${err.stderr.trim() || err.stdout.trim() || err.message}`
+    : err instanceof Error
+      ? err.message
+      : String(err);
 }
 
 export function registerBirdTools(server: McpServer) {
@@ -75,9 +57,9 @@ export function registerBirdTools(server: McpServer) {
     },
     async () => {
       try {
-        return toTextResult(await runBirdText(['whoami']));
+        return textResult(await runBirdText(['whoami']));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -95,9 +77,9 @@ export function registerBirdTools(server: McpServer) {
     },
     async ({ id_or_url }) => {
       try {
-        return toJsonResult(await runBirdJson(['read', id_or_url]));
+        return jsonResult(await runBirdJson(['read', id_or_url]));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -115,9 +97,9 @@ export function registerBirdTools(server: McpServer) {
     },
     async ({ id_or_url }) => {
       try {
-        return toJsonResult(await runBirdJson(['thread', id_or_url]));
+        return jsonResult(await runBirdJson(['thread', id_or_url]));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -134,9 +116,9 @@ export function registerBirdTools(server: McpServer) {
     },
     async ({ id_or_url }) => {
       try {
-        return toJsonResult(await runBirdJson(['replies', id_or_url]));
+        return jsonResult(await runBirdJson(['replies', id_or_url]));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -157,9 +139,9 @@ export function registerBirdTools(server: McpServer) {
       try {
         const args = ['search', query];
         if (count) args.push('--count', String(count));
-        return toJsonResult(await runBirdJson(args));
+        return jsonResult(await runBirdJson(args));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -184,9 +166,9 @@ export function registerBirdTools(server: McpServer) {
         const args = ['mentions'];
         if (user) args.push('--user', user);
         if (count) args.push('--count', String(count));
-        return toJsonResult(await runBirdJson(args));
+        return jsonResult(await runBirdJson(args));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -208,9 +190,9 @@ export function registerBirdTools(server: McpServer) {
         const args = ['bookmarks'];
         if (count) args.push('--count', String(count));
         if (folder_id) args.push('--folder-id', folder_id);
-        return toJsonResult(await runBirdJson(args));
+        return jsonResult(await runBirdJson(args));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -228,9 +210,9 @@ export function registerBirdTools(server: McpServer) {
     },
     async ({ text }) => {
       try {
-        return toTextResult(await runBirdText(['tweet', text]));
+        return textResult(await runBirdText(['tweet', text]));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );
@@ -249,9 +231,9 @@ export function registerBirdTools(server: McpServer) {
     },
     async ({ id_or_url, text }) => {
       try {
-        return toTextResult(await runBirdText(['reply', id_or_url, text]));
+        return textResult(await runBirdText(['reply', id_or_url, text]));
       } catch (err) {
-        return errorResult(err);
+        return errorResult(birdErrorText(err));
       }
     },
   );

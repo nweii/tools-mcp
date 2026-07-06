@@ -1,19 +1,25 @@
-// ABOUTME: Process entry — listens on PORT using the shared Express app from app.ts.
+// ABOUTME: Process entry — builds the app via createApp() and starts it with the kit's startServer,
+// which persists Claude-facing tokens on SIGTERM/SIGINT. createAuth refuses to construct when the
+// OAuth approval page is unguarded, so a misconfigured deployment fails fast here rather than booting.
+import { startServer } from 'mcp-server-kit';
 import { createApp } from './app.js';
-import { saveTokens } from './auth.js';
 
 const PORT = parseInt(process.env.PORT ?? '3457', 10);
-const app = createApp();
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`tools-mcp listening on port ${PORT}`);
-});
+let built: ReturnType<typeof createApp>;
+try {
+  built = createApp();
+} catch (err) {
+  console.error(`[auth] ${(err as Error).message}`);
+  process.exit(1);
+}
 
-process.on('SIGTERM', () => {
-  saveTokens();
-  process.exit(0);
-});
-process.on('SIGINT', () => {
-  saveTokens();
-  process.exit(0);
+const { app, auth } = built;
+
+startServer({
+  app,
+  port: PORT,
+  onListen: () => console.log(`tools-mcp listening on port ${PORT}`),
+  // Persist Claude-facing tokens on clean shutdown so clients survive container restarts.
+  onShutdown: () => auth.saveTokens(),
 });
