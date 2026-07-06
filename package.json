@@ -11,13 +11,15 @@
     "test": "TOOLS_MCP_TEST=1 bun test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.10.2",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@steipete/bird": "^0.8.0",
     "express": "^4.21.2",
+    "mcp-server-kit": "git+https://github.com/nweii/mcp-server-kit.git",
     "zod": "^3.24.2"
   },
   "devDependencies": {
     "@types/express": "^5.0.1",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "bun-types": "^1.1.0"
   }
 }

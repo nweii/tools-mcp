@@ -1,6 +1,7 @@
 // ABOUTME: Registers MCP tools that call the Cloudflare Browser Rendering (Browser Run) REST API — render pages to Markdown/HTML, screenshot, scrape elements, multi-format snapshot, and extract links.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { errorResult } from 'mcp-server-kit';
 
 const VERSION = '0.1.0';
 const API_BASE = process.env.CLOUDFLARE_API_BASE ?? 'https://api.cloudflare.com/client/v4';
@@ -93,16 +94,14 @@ export async function imageContentFromResponse(response: Response): Promise<Imag
   return { type: 'image', mimeType: contentType || 'image/png', data };
 }
 
+// A human-readable text block plus a structuredContent object carrying the same payload — distinct
+// from the kit's jsonResult (whose text is the JSON itself) and textResult (which has no structured
+// field), so it stays local.
 function toTextResult(text: string, structured?: Record<string, unknown>) {
   return {
     content: [{ type: 'text' as const, text }],
     ...(structured ? { structuredContent: structured } : {}),
   };
-}
-
-function errorResult(err: unknown) {
-  const text = err instanceof Error ? err.message : String(err);
-  return { content: [{ type: 'text' as const, text }], isError: true };
 }
 
 const urlField = z.string().url().describe('URL of the page to render.');

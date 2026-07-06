@@ -1,6 +1,7 @@
 // ABOUTME: Registers MCP tools that call the Perplexity AI REST API directly — search, ask, research, reason.
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { errorResult } from 'mcp-server-kit';
 
 const PERPLEXITY_BASE_URL = process.env.PERPLEXITY_BASE_URL ?? 'https://api.perplexity.ai';
 const VERSION = '0.1.0';
@@ -170,16 +171,14 @@ function formatSearchResults(data: SearchResponseBody): string {
   return header + lines.join('\n\n') + '\n';
 }
 
+// A human-readable text block plus a structuredContent object carrying the same answer — distinct
+// from the kit's jsonResult (whose text is the JSON itself) and textResult (which has no structured
+// field), so it stays local.
 function toTextResult(text: string, structured?: Record<string, unknown>) {
   return {
     content: [{ type: 'text' as const, text }],
     ...(structured ? { structuredContent: structured } : {}),
   };
-}
-
-function errorResult(err: unknown) {
-  const text = err instanceof Error ? err.message : String(err);
-  return { content: [{ type: 'text' as const, text }], isError: true };
 }
 
 export function registerPerplexityTools(server: McpServer) {
