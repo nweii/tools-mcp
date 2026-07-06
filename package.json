@@ -7,7 +7,8 @@
   "description": "Personal MCP toolkit — exposes wrapped local CLIs and remote APIs (bird, Perplexity, …) as MCP tools for remote use from Claude.ai and other MCP clients.",
   "scripts": {
     "start": "bun run src/server.ts",
-    "dev": "bun --watch run src/server.ts"
+    "dev": "bun --watch run src/server.ts",
+    "test": "TOOLS_MCP_TEST=1 bun test"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.10.2",
