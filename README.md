@@ -98,6 +98,18 @@ Same shape as `obsidian-remote-mcp`: Docker behind a reverse proxy that handles 
 2. URL: `https://tools-mcp.yourdomain.com/mcp`
 3. Approve in the consent screen that opens on `/authorize`
 
+### ChatGPT desktop app and Codex
+
+Use the static bearer-token path. Set `MCP_STATIC_BEARER_TOKEN` to a long random value in the server environment, then add a Streamable HTTP MCP server at `https://tools-mcp.yourdomain.com/mcp`. Add this header in the client:
+
+```text
+Authorization: Bearer YOUR_MCP_STATIC_BEARER_TOKEN
+```
+
+The desktop app's **Bearer token env var** field expects an environment-variable name, not the token. Save the server and restart the app. CORS does not need changing for this path.
+
+Hosted ChatGPT connectors use a different OAuth flow. This server uses one fixed `MCP_CLIENT_ID` and does not support Client ID Metadata Documents or dynamic client registration, so treat hosted ChatGPT OAuth as unsupported until it has been verified end to end.
+
 ### `mcp-remote` / scripts / Claude Code
 
 Use the static bearer token instead of the browser flow:
