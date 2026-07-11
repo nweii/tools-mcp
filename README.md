@@ -108,8 +108,6 @@ Authorization: Bearer YOUR_MCP_STATIC_BEARER_TOKEN
 
 The desktop app's **Bearer token env var** field expects an environment-variable name, not the token. Save the server and restart the app. CORS does not need changing for this path.
 
-Hosted ChatGPT connectors use a different OAuth flow. This server uses one fixed `MCP_CLIENT_ID` and does not support Client ID Metadata Documents or dynamic client registration, so treat hosted ChatGPT OAuth as unsupported until it has been verified end to end.
-
 ### `mcp-remote` / scripts / Claude Code
 
 Use the static bearer token instead of the browser flow:
