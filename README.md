@@ -56,6 +56,7 @@ The Claude-facing OAuth surface is served by the MCP SDK (via [`mcp-server-kit`]
 
 - OAuth 2.1 + PKCE, with discovery at `/.well-known/oauth-authorization-server`, the approval page at `/authorize`, and token exchange at `/token` (compatible with Claude.ai's connector flow)
 - The approval page is guarded: the server refuses to start unless one of `APPROVAL_PASSWORD` (a password on the approval page), `MCP_CLIENT_SECRET` (a secret required at token exchange), or `APPROVAL_OPEN=true` (declares an external gateway already guards `/authorize`) is set
+- Optional DCR for public OAuth clients, enabled by `MCP_DCR_ALLOWED_REDIRECT_URIS`; it requires `APPROVAL_PASSWORD`
 - Static bearer token (`MCP_STATIC_BEARER_TOKEN`) for clients that bypass the browser flow
 - Bearer-gated liveness at `/health` — returns 404 unless `HEALTH_TOKEN` is set, then requires that token; the secret pasted into an uptime monitor grants nothing else and rotates independently of the `/mcp` auth
 - CORS allowlisting via `CORS_ALLOWED_ORIGINS`
@@ -100,13 +101,9 @@ Same shape as `obsidian-remote-mcp`: Docker behind a reverse proxy that handles 
 
 ### ChatGPT desktop app and Codex
 
-Use the static bearer-token path. Set `MCP_STATIC_BEARER_TOKEN` to a long random value in the server environment, then add a Streamable HTTP MCP server at `https://tools-mcp.yourdomain.com/mcp`. Add this header in the client:
+Use browser OAuth through Dynamic Client Registration (DCR). Set `MCP_DCR_ALLOWED_REDIRECT_URIS` to the callback URIs that this server will accept from public MCP clients, keep `APPROVAL_PASSWORD` set, then add `https://tools-mcp.yourdomain.com/mcp` with no bearer token or static Authorization header. Restart the client, select **Authenticate**, and complete the approval-password screen.
 
-```text
-Authorization: Bearer YOUR_MCP_STATIC_BEARER_TOKEN
-```
-
-The desktop app's **Bearer token env var** field expects an environment-variable name, not the token. Save the server and restart the app. CORS does not need changing for this path.
+`MCP_STATIC_BEARER_TOKEN` remains available for scripts or clients that cannot use OAuth. It is not needed for ChatGPT desktop or Codex when DCR is configured. CORS does not need changing for either path.
 
 ### `mcp-remote` / scripts / Claude Code
 

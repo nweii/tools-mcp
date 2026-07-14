@@ -6,6 +6,8 @@ services:
     environment:
       MCP_BASE_URL: https://tools-mcp.example.com
       MCP_CLIENT_ID: your-client-id
+      MCP_CLIENT_ALLOWED_REDIRECT_URIS: https://claude.ai/api/mcp/auth_callback
+      MCP_DCR_ALLOWED_REDIRECT_URIS: ""                 # Set public-client callbacks to enable DCR.
       APPROVAL_PASSWORD: your-approval-password        # guards /authorize — required unless MCP_CLIENT_SECRET or APPROVAL_OPEN is set (server refuses to boot unguarded)
       MCP_CLIENT_SECRET: ""                            # optional; also satisfies the /authorize guard
       MCP_STATIC_BEARER_TOKEN: ""                      # optional, generate with: openssl rand -hex 32

@@ -14,6 +14,11 @@ function getAllowedOrigins(): string[] | null {
   return env.split(',').map((origin) => origin.trim()).filter(Boolean);
 }
 
+function getCommaList(value: string | undefined): string[] | undefined {
+  const items = value?.split(',').map((item) => item.trim()).filter(Boolean);
+  return items?.length ? items : undefined;
+}
+
 // Builds the server. Returns the app and its auth instance; the entry point persists tokens via
 // auth.saveTokens() on shutdown. createAuth throws at construction when /authorize is unguarded, so a
 // misconfigured deployment fails fast rather than booting exposed.
@@ -24,14 +29,16 @@ export function createApp(): { app: Express; auth: Auth } {
   const clientId = process.env.MCP_CLIENT_ID;
   if (!clientId) throw new Error('MCP_CLIENT_ID env var is required');
 
-  const redirectEnv = process.env.MCP_ALLOWED_REDIRECT_URIS;
+  const clientRedirectUris = getCommaList(process.env.MCP_CLIENT_ALLOWED_REDIRECT_URIS);
+  const dcrRedirectUris = getCommaList(process.env.MCP_DCR_ALLOWED_REDIRECT_URIS);
   const auth = createAuth({
     baseUrl: process.env.MCP_BASE_URL ?? `http://localhost:${port}`,
     clientId,
     displayName: process.env.MCP_SERVER_DISPLAY_NAME ?? 'tools-mcp',
     tokenStorePath: process.env.TOKEN_STORE_PATH ?? './tokens.json',
     clientSecret: process.env.MCP_CLIENT_SECRET,
-    allowedRedirectUris: redirectEnv ? redirectEnv.split(',').map((u) => u.trim()) : undefined,
+    allowedRedirectUris: clientRedirectUris,
+    dynamicClientRegistration: dcrRedirectUris ? { allowedRedirectUris: dcrRedirectUris } : undefined,
     staticBearerToken: process.env.MCP_STATIC_BEARER_TOKEN,
     approvalPassword: process.env.APPROVAL_PASSWORD,
     approvalOpen: process.env.APPROVAL_OPEN?.trim().toLowerCase() === 'true',

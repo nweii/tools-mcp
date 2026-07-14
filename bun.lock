@@ -159,7 +159,7 @@
 
     "math-intrinsics": ["math-intrinsics@1.1.0", "", {}, "sha512-/IXtbwEk5HTPyEwyKX6hGkYXxM9nbj64B+ilVJnC/R6B0pH5G4V3b0pVbL7DBj4tkhBAppbQUlf6F6Xl9LHu1g=="],
 
-    "mcp-server-kit": ["mcp-server-kit@github:nweii/mcp-server-kit#04e2951", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0", "express": "^4.21.2" } }, "nweii-mcp-server-kit-04e2951", "sha512-US4cVyTCd0BLU1Ka+u0DS1JIxJS8ZEjnKlb+KSVmRM+VduM6+HikDgflAU56qijFoitRV/HV3uC5KvGMX1Sptg=="],
+    "mcp-server-kit": ["mcp-server-kit@github:nweii/mcp-server-kit#1661e34", { "dependencies": { "@modelcontextprotocol/sdk": "^1.29.0", "express": "^4.21.2" } }, "nweii-mcp-server-kit-1661e34", "sha512-t5VCIsSA7H+jf6oi3iFPyOF8Io31ke+c3uSWxp7eaxYt3/5UQpP2IXKJ42ExDtSLUPzs2ObdEPsH2/Te+Gic1w=="],
 
     "media-typer": ["media-typer@0.3.0", "", {}, "sha512-dq+qelQ9akHpcOl/gUVRTxVIOkAJ1wR3QAvb4RsVjS8oVoFjDGTc679wJYmUmknUF5HwMLOgb5O+a3KxfWapPQ=="],
 

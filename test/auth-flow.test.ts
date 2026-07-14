@@ -7,7 +7,12 @@ import { createHash, randomBytes } from 'crypto';
 import type { Server } from 'http';
 import { createServer } from 'net';
 
+const REDIRECT = 'https://configured.example/oauth/callback';
+const DCR_REDIRECT = 'com.example.mcp:/oauth/callback';
+
 process.env.MCP_CLIENT_ID = 'test-client';
+process.env.MCP_CLIENT_ALLOWED_REDIRECT_URIS = REDIRECT;
+process.env.MCP_DCR_ALLOWED_REDIRECT_URIS = DCR_REDIRECT;
 process.env.MCP_STATIC_BEARER_TOKEN = 'static-bearer-fixture';
 
 const { createApp } = await import('../src/app.ts');
@@ -26,7 +31,6 @@ function freePort(): Promise<number> {
   });
 }
 
-const REDIRECT = 'https://claude.ai/api/mcp/auth_callback';
 let server: Server;
 let base: string;
 
@@ -47,6 +51,8 @@ beforeAll(async () => {
 afterAll(() => {
   server?.close();
   delete process.env.APPROVAL_PASSWORD;
+  delete process.env.MCP_CLIENT_ALLOWED_REDIRECT_URIS;
+  delete process.env.MCP_DCR_ALLOWED_REDIRECT_URIS;
 });
 
 function pkce() {
@@ -97,6 +103,28 @@ test('GET /authorize renders the approval page for valid params', async () => {
   const res = await fetch(url);
   expect(res.status).toBe(200);
   expect(await res.text()).toContain('Approve');
+});
+
+test('DCR registers an allowed public client', async () => {
+  const metadata = (await (await fetch(`${base}/.well-known/oauth-authorization-server`)).json()) as {
+    registration_endpoint?: string;
+  };
+  expect(metadata.registration_endpoint).toBe(`${base}/register`);
+
+  const res = await fetch(`${base}/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      redirect_uris: [DCR_REDIRECT],
+      token_endpoint_auth_method: 'none',
+      grant_types: ['authorization_code'],
+      response_types: ['code'],
+    }),
+  });
+  expect(res.status).toBe(201);
+  const client = (await res.json()) as { client_id?: string; redirect_uris?: string[] };
+  expect(client.client_id).toBeTruthy();
+  expect(client.redirect_uris).toEqual([DCR_REDIRECT]);
 });
 
 test('GET /authorize rejects an unknown client_id', async () => {

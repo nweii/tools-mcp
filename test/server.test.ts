@@ -78,6 +78,7 @@ test('advertises OAuth authorization-server metadata', async () => {
   // Re-pin (delta: token endpoint /oauth/token → /token).
   expect(meta.token_endpoint).toBe(`${base}/token`);
   expect(meta.code_challenge_methods_supported).toContain('S256');
+  expect(meta.registration_endpoint).toBeUndefined();
   // No client secret configured in this suite, so 'none' is an advertised auth method.
   expect(meta.token_endpoint_auth_methods_supported).toContain('none');
 });
