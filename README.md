@@ -56,7 +56,7 @@ The Claude-facing OAuth surface is served by the MCP SDK (via [`mcp-server-kit`]
 
 - OAuth 2.1 + PKCE, with discovery at `/.well-known/oauth-authorization-server`, the approval page at `/authorize`, and token exchange at `/token` (compatible with Claude.ai's connector flow)
 - The approval page is guarded: the server refuses to start unless one of `APPROVAL_PASSWORD` (a password on the approval page), `MCP_CLIENT_SECRET` (a secret required at token exchange), or `APPROVAL_OPEN=true` (declares an external gateway already guards `/authorize`) is set
-- Optional DCR for public OAuth clients, enabled by `MCP_DCR_ALLOWED_REDIRECT_URIS`; it requires `APPROVAL_PASSWORD`
+- Optional dynamic client registration for clients that can't be pre-configured (e.g. ChatGPT), enabled by `MCP_DCR_ENABLED`; it requires `APPROVAL_PASSWORD`
 - Static bearer token (`MCP_STATIC_BEARER_TOKEN`) for clients that bypass the browser flow
 - Bearer-gated liveness at `/health` — returns 404 unless `HEALTH_TOKEN` is set, then requires that token; the secret pasted into an uptime monitor grants nothing else and rotates independently of the `/mcp` auth
 - CORS allowlisting via `CORS_ALLOWED_ORIGINS`
@@ -99,11 +99,11 @@ Same shape as `obsidian-remote-mcp`: Docker behind a reverse proxy that handles 
 2. URL: `https://tools-mcp.yourdomain.com/mcp`
 3. Approve in the consent screen that opens on `/authorize`
 
-### ChatGPT desktop app and Codex
+### ChatGPT and Codex
 
-Use browser OAuth through Dynamic Client Registration (DCR). Set `MCP_DCR_ALLOWED_REDIRECT_URIS` to the callback URIs that this server will accept from public MCP clients, keep `APPROVAL_PASSWORD` set, then add `https://tools-mcp.yourdomain.com/mcp` with no bearer token or static Authorization header. Restart the client, select **Authenticate**, and complete the approval-password screen.
+ChatGPT has two setup surfaces — the **web** app (custom connectors live behind developer mode; see OpenAI's [developer mode guide](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt)) and the **desktop** app / Codex (their own connector flow).
 
-`MCP_STATIC_BEARER_TOKEN` remains available for scripts or clients that cannot use OAuth. It is not needed for ChatGPT desktop or Codex when DCR is configured. CORS does not need changing for either path.
+The simplest path — and the one the desktop app needs — is to let the client register itself: set `MCP_DCR_ENABLED=true` on the server (keep `APPROVAL_PASSWORD` set, it's the gate), then add `https://tools-mcp.yourdomain.com/mcp` with no client ID or callback to configure. On the web app you can instead pick **User-Defined OAuth Client** and enter your `MCP_CLIENT_ID`. Either way, authenticate in the browser and complete the approval-password screen. A non-OAuth client can use the static bearer token (below).
 
 ### `mcp-remote` / scripts / Claude Code
 

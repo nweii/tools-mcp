@@ -36,6 +36,9 @@ beforeAll(async () => {
   // click-to-approve surface this suite characterizes.
   delete process.env.MCP_CLIENT_SECRET;
   delete process.env.APPROVAL_PASSWORD;
+  // This suite pins the DCR-off shape; another suite may have set these (process.env is shared).
+  delete process.env.MCP_DCR_ENABLED;
+  delete process.env.MCP_DCR_ALLOWED_REDIRECT_URIS;
   process.env.APPROVAL_OPEN = 'true';
 
   const port = await freePort();
