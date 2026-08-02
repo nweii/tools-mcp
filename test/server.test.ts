@@ -5,10 +5,33 @@
 import { test, expect, beforeAll, afterAll } from 'bun:test';
 import type { Server } from 'http';
 import { createServer } from 'net';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import type { Auth } from 'mcp-server-kit';
 
 process.env.MCP_CLIENT_ID ??= 'test-client';
 
+const MODERN_PROTOCOL_VERSION = '2026-07-28';
+const EXPECTED_TOOL_ORDER = [
+  'bird_whoami',
+  'bird_read',
+  'bird_thread',
+  'bird_replies',
+  'bird_search',
+  'bird_mentions',
+  'bird_bookmarks',
+  'bird_post_tweet',
+  'bird_reply',
+  'browser_markdown',
+  'browser_content',
+  'browser_screenshot',
+  'browser_scrape',
+  'browser_links',
+  'browser_snapshot',
+  'perplexity_search',
+  'perplexity_ask',
+  'perplexity_research',
+  'perplexity_reason',
+];
 const { createApp } = await import('../src/app.ts');
 
 // A free port, so MCP_BASE_URL is final before createApp(): the SDK-backed auth bakes the
@@ -28,6 +51,31 @@ function freePort(): Promise<number> {
 let server: Server;
 let base: string;
 let auth: Auth;
+
+type ListedTool = {
+  name: string;
+  description?: string;
+  annotations?: Record<string, boolean>;
+  inputSchema?: Record<string, unknown>;
+};
+
+async function sdkClient(mode: 'legacy' | { pin: string }) {
+  const token = auth.seedTestToken();
+  const client = new Client(
+    { name: 'tools-mcp-http-test', version: '1.0.0' },
+    { versionNegotiation: { mode } },
+  );
+  const transport = new StreamableHTTPClientTransport(new URL(`${base}/mcp`), {
+    authProvider: { token: async () => token },
+  });
+  await client.connect(transport);
+  return { client, transport };
+}
+
+function parseRpc(text: string): { result?: any; error?: { message?: string } } {
+  const dataLine = text.split('\n').find((line) => line.startsWith('data: '));
+  return JSON.parse(dataLine ? dataLine.slice(6) : text);
+}
 
 beforeAll(async () => {
   // This suite pins the no-secret, no-password configuration. process.env is shared across test files,
@@ -131,7 +179,7 @@ test('POST /mcp initialize returns server info and advertises tool capability', 
     }),
   });
   expect(res.status).toBe(200);
-  const body = (await res.json()) as {
+  const body = parseRpc(await res.text()) as {
     result?: { serverInfo?: { name?: string }; capabilities?: { tools?: unknown } };
   };
   expect(body.result?.serverInfo?.name).toBe('tools-mcp');
@@ -152,7 +200,7 @@ test('POST /mcp tools/list advertises the wrapped CLI tools', async () => {
     body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
   });
   expect(res.status).toBe(200);
-  const body = (await res.json()) as { result?: { tools?: { name: string }[] } };
+  const body = parseRpc(await res.text()) as { result?: { tools?: { name: string }[] } };
   const names = (body.result?.tools ?? []).map((t) => t.name).sort();
   expect(names).toEqual(
     [
@@ -177,6 +225,56 @@ test('POST /mcp tools/list advertises the wrapped CLI tools', async () => {
       'perplexity_search',
     ].sort(),
   );
+});
+
+test('modern server/discover advertises 2026-07-28 without a session', async () => {
+  const { client, transport } = await sdkClient({ pin: MODERN_PROTOCOL_VERSION });
+  try {
+    expect(client.getProtocolEra()).toBe('modern');
+    expect(client.getNegotiatedProtocolVersion()).toBe(MODERN_PROTOCOL_VERSION);
+    expect(client.getDiscoverResult()?.supportedVersions).toEqual([MODERN_PROTOCOL_VERSION]);
+    expect(client.getServerVersion()?.name).toBe('tools-mcp');
+    expect(transport.sessionId).toBeUndefined();
+  } finally {
+    await client.close();
+  }
+});
+
+test('modern and legacy clients see identical tool contracts in registration order', async () => {
+  const [{ client: legacy }, { client: modern, transport }] = await Promise.all([
+    sdkClient('legacy'),
+    sdkClient({ pin: MODERN_PROTOCOL_VERSION }),
+  ]);
+  try {
+    expect(legacy.getProtocolEra()).toBe('legacy');
+    expect(modern.getProtocolEra()).toBe('modern');
+    expect(transport.sessionId).toBeUndefined();
+
+    const [legacyResult, modernResult] = await Promise.all([legacy.listTools(), modern.listTools()]);
+    const legacyTools = legacyResult.tools as ListedTool[];
+    const modernTools = modernResult.tools as ListedTool[];
+    const contract = (tool: ListedTool) => ({
+      name: tool.name,
+      description: tool.description,
+      annotations: tool.annotations,
+      inputSchema: tool.inputSchema,
+    });
+    expect(modernTools.map(contract)).toEqual(legacyTools.map(contract));
+    expect(modernTools).toHaveLength(19);
+    expect(modernTools.map((tool) => tool.name)).toEqual(EXPECTED_TOOL_ORDER);
+
+    const birdPost = modernTools.find((tool) => tool.name === 'bird_post_tweet');
+    const birdReply = modernTools.find((tool) => tool.name === 'bird_reply');
+    expect(birdPost?.annotations).toMatchObject({
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: true,
+    });
+    expect(birdReply?.annotations).toEqual(birdPost?.annotations);
+  } finally {
+    await Promise.all([legacy.close(), modern.close()]);
+  }
 });
 
 test('/health is 404 when no HEALTH_TOKEN is configured', async () => {

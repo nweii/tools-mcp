@@ -5,8 +5,10 @@
 import { test, expect, afterEach, afterAll } from 'bun:test';
 import type { Server } from 'http';
 import { createServer } from 'net';
+import { createHash, randomBytes } from 'crypto';
 import { tmpdir } from 'os';
 import { join } from 'path';
+import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 
 process.env.MCP_CLIENT_ID ??= 'test-client';
 
@@ -84,6 +86,46 @@ async function registrationEndpoint(base: string): Promise<unknown> {
   return meta.registration_endpoint;
 }
 
+function pkce() {
+  const verifier = randomBytes(32).toString('base64url');
+  const challenge = createHash('sha256').update(verifier).digest('base64url');
+  return { verifier, challenge };
+}
+
+async function issueDcrToken(base: string, clientId: string): Promise<string> {
+  const { verifier, challenge } = pkce();
+  const authRes = await fetch(`${base}/authorize`, {
+    method: 'POST',
+    redirect: 'manual',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      response_type: 'code',
+      client_id: clientId,
+      redirect_uri: CHATGPT_CALLBACK,
+      code_challenge: challenge,
+      code_challenge_method: 'S256',
+      password: 'sekret',
+    }),
+  });
+  expect(authRes.status).toBe(302);
+  const code = new URL(authRes.headers.get('location')!).searchParams.get('code');
+  expect(code).toBeTruthy();
+
+  const tokenRes = await fetch(`${base}/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code!,
+      code_verifier: verifier,
+      client_id: clientId,
+      redirect_uri: CHATGPT_CALLBACK,
+    }),
+  });
+  expect(tokenRes.status).toBe(200);
+  return ((await tokenRes.json()) as { access_token: string }).access_token;
+}
+
 test('MCP_DCR_ENABLED opens /register and accepts a self-registered ChatGPT callback with no allowlist', async () => {
   resetDcrEnv();
   process.env.MCP_DCR_ENABLED = 'true';
@@ -94,6 +136,30 @@ test('MCP_DCR_ENABLED opens /register and accepts a self-registered ChatGPT call
   expect(reg.status).toBe(201);
   expect(typeof reg.body.client_id).toBe('string');
   expect(reg.body.token_endpoint_auth_method).toBe('none');
+});
+
+test('a dynamically registered client can issue a token and dispatch a modern tools/list request', async () => {
+  resetDcrEnv();
+  process.env.MCP_DCR_ENABLED = 'true';
+  const base = await standup();
+  const reg = await register(base, CHATGPT_CALLBACK);
+  expect(reg.status).toBe(201);
+  const token = await issueDcrToken(base, reg.body.client_id!);
+
+  const client = new Client(
+    { name: 'dcr-modern-test', version: '1.0.0' },
+    { versionNegotiation: { mode: { pin: '2026-07-28' } } },
+  );
+  const transport = new StreamableHTTPClientTransport(new URL(`${base}/mcp`), {
+    authProvider: { token: async () => token },
+  });
+  try {
+    await client.connect(transport);
+    expect(client.getProtocolEra()).toBe('modern');
+    expect((await client.listTools()).tools).toHaveLength(19);
+  } finally {
+    await client.close();
+  }
 });
 
 test('open registration declines plaintext http on a non-loopback host', async () => {

@@ -1,5 +1,5 @@
 // ABOUTME: Registers MCP tools that call the Perplexity AI REST API directly — search, ask, research, reason.
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { errorResult } from 'mcp-server-kit';
 
@@ -189,7 +189,7 @@ export function registerPerplexityTools(server: McpServer) {
       description:
         'Search the web via Perplexity. Returns a ranked list of results with titles, URLs, snippets, and dates — no AI synthesis. ' +
         'For AI-generated answers with citations, use perplexity_ask instead.',
-      inputSchema: {
+      inputSchema: z.object({
         query: z.string().min(1).describe('Search query string.'),
         max_results: z.number().int().min(1).max(20).optional().describe('Max results (1-20, default 10).'),
         max_tokens_per_page: z
@@ -204,7 +204,7 @@ export function registerPerplexityTools(server: McpServer) {
           .length(2)
           .optional()
           .describe('ISO 3166-1 alpha-2 country code for regional results (e.g. "US", "GB").'),
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ query, max_results, max_tokens_per_page, country }) => {
@@ -233,12 +233,12 @@ export function registerPerplexityTools(server: McpServer) {
         'Web-grounded answer using the Sonar Pro model. Best for quick factual questions, summaries, and explanations. ' +
         'Returns text with numbered citations. Cheapest and fastest of the chat tools. ' +
         'For deeper investigation use perplexity_research; for step-by-step logic use perplexity_reason.',
-      inputSchema: {
+      inputSchema: z.object({
         messages: messagesField,
         search_recency_filter: recencyField,
         search_domain_filter: domainFilterField,
         search_context_size: contextSizeField,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ messages, search_recency_filter, search_domain_filter, search_context_size }) => {
@@ -262,11 +262,11 @@ export function registerPerplexityTools(server: McpServer) {
       description:
         'Comprehensive multi-source research using the Sonar Deep Research model. Best for literature reviews and investigative queries needing many sources. ' +
         'SLOW — 30s+ per call. Returns a detailed response with numbered citations.',
-      inputSchema: {
+      inputSchema: z.object({
         messages: messagesField,
         strip_thinking: stripThinkingField,
         reasoning_effort: reasoningEffortField,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ messages, strip_thinking, reasoning_effort }) => {
@@ -288,13 +288,13 @@ export function registerPerplexityTools(server: McpServer) {
       description:
         'Step-by-step reasoning with web grounding using the Sonar Reasoning Pro model. Best for math, comparisons, complex arguments, and chain-of-thought tasks. ' +
         'Returns a reasoned response with numbered citations.',
-      inputSchema: {
+      inputSchema: z.object({
         messages: messagesField,
         strip_thinking: stripThinkingField,
         search_recency_filter: recencyField,
         search_domain_filter: domainFilterField,
         search_context_size: contextSizeField,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ messages, strip_thinking, search_recency_filter, search_domain_filter, search_context_size }) => {

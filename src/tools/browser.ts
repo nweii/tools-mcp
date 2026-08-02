@@ -1,5 +1,5 @@
 // ABOUTME: Registers MCP tools that call the Cloudflare Browser Rendering (Browser Run) REST API — render pages to Markdown/HTML, screenshot, scrape elements, multi-format snapshot, and extract links.
-import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { z } from 'zod';
 import { errorResult } from 'mcp-server-kit';
 
@@ -130,7 +130,7 @@ export function registerBrowserTools(server: McpServer) {
       description:
         'Render a web page in a headless cloud browser and return its content as clean Markdown. ' +
         'Handles JavaScript-rendered pages that a plain fetch cannot. Billed on browser time (Cloudflare Browser Rendering).',
-      inputSchema: { url: urlField, gotoOptions: gotoOptionsField, rejectResourceTypes: rejectResourceTypesField },
+      inputSchema: z.object({ url: urlField, gotoOptions: gotoOptionsField, rejectResourceTypes: rejectResourceTypesField }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ url, gotoOptions, rejectResourceTypes }) => {
@@ -151,7 +151,7 @@ export function registerBrowserTools(server: McpServer) {
       description:
         'Render a web page in a headless cloud browser and return its full post-JavaScript HTML. ' +
         'Use browser_markdown for readable text; use this when you need the raw rendered DOM.',
-      inputSchema: { url: urlField, gotoOptions: gotoOptionsField, rejectResourceTypes: rejectResourceTypesField },
+      inputSchema: z.object({ url: urlField, gotoOptions: gotoOptionsField, rejectResourceTypes: rejectResourceTypesField }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ url, gotoOptions, rejectResourceTypes }) => {
@@ -172,7 +172,7 @@ export function registerBrowserTools(server: McpServer) {
       description:
         'Capture a screenshot of a web page from a headless cloud browser and return it as an image. ' +
         'The only way to "see" a page from a client with no local browser (mobile, headless server). Billed on browser time.',
-      inputSchema: {
+      inputSchema: z.object({
         url: urlField,
         viewport: z
           .object({
@@ -190,7 +190,7 @@ export function registerBrowserTools(server: McpServer) {
           .optional(),
         gotoOptions: gotoOptionsField,
         rejectResourceTypes: rejectResourceTypesField,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ url, viewport, screenshotOptions, gotoOptions, rejectResourceTypes }) => {
@@ -217,12 +217,12 @@ export function registerBrowserTools(server: McpServer) {
       description:
         'Render a page and extract the elements matching each CSS selector (text, html, and attributes per match). ' +
         'Use for targeted assertions instead of reading a whole page — e.g. selectors ["h1", ".price"].',
-      inputSchema: {
+      inputSchema: z.object({
         url: urlField,
         selectors: z.array(z.string().min(1)).min(1).describe('CSS selectors to extract, e.g. ["h1", ".price"].'),
         gotoOptions: gotoOptionsField,
         rejectResourceTypes: rejectResourceTypesField,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ url, selectors, gotoOptions, rejectResourceTypes }) => {
@@ -246,7 +246,7 @@ export function registerBrowserTools(server: McpServer) {
     {
       title: 'Browser: extract links',
       description: 'Render a page and return all of its links. Billed on browser time (Cloudflare Browser Rendering).',
-      inputSchema: { url: urlField, gotoOptions: gotoOptionsField },
+      inputSchema: z.object({ url: urlField, gotoOptions: gotoOptionsField }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ url, gotoOptions }) => {
@@ -269,7 +269,7 @@ export function registerBrowserTools(server: McpServer) {
         'Render a page once and return multiple representations in a single call (one browser-time charge): ' +
         'content (HTML), screenshot, markdown, and accessibilityTree. The accessibility tree is a structured semantic ' +
         'view useful for assertions, and is only available here. Request at least two formats; for one, use the dedicated tool.',
-      inputSchema: {
+      inputSchema: z.object({
         url: urlField,
         formats: z
           .array(z.enum(['content', 'screenshot', 'markdown', 'accessibilityTree']))
@@ -277,7 +277,7 @@ export function registerBrowserTools(server: McpServer) {
           .describe('Representations to return (at least 2). Default ["content","screenshot"].'),
         gotoOptions: gotoOptionsField,
         rejectResourceTypes: rejectResourceTypesField,
-      },
+      }),
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
     async ({ url, formats, gotoOptions, rejectResourceTypes }) => {
