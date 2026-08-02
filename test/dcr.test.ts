@@ -6,6 +6,7 @@ import { test, expect, afterEach, afterAll } from 'bun:test';
 import type { Server } from 'http';
 import { createServer } from 'net';
 import { createHash, randomBytes } from 'crypto';
+import { mkdtemp, rm } from 'fs/promises';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
@@ -13,6 +14,7 @@ import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/cli
 process.env.MCP_CLIENT_ID ??= 'test-client';
 
 const { createApp } = await import('../src/app.ts');
+const dcrTempDir = await mkdtemp(join(tmpdir(), 'tools-mcp-dcr-'));
 
 // A representative ChatGPT connector callback — unique per connector, so it can never be pre-listed.
 const CHATGPT_CALLBACK = 'https://chatgpt.com/connector/oauth/abc123';
@@ -21,11 +23,13 @@ const open: Server[] = [];
 afterEach(() => {
   for (const s of open.splice(0)) s.close();
 });
-afterAll(() => {
+afterAll(async () => {
   // process.env is shared across suites — leave DCR off for whatever runs next.
   delete process.env.MCP_DCR_ENABLED;
   delete process.env.MCP_DCR_ALLOWED_REDIRECT_URIS;
   delete process.env.APPROVAL_OPEN;
+  delete process.env.TOKEN_STORE_PATH;
+  await rm(dcrTempDir, { recursive: true, force: true });
 });
 
 function freePort(): Promise<number> {
@@ -51,7 +55,7 @@ function resetDcrEnv(): void {
 
 // Stand up tools-mcp on a fresh port with the current process.env; returns the live base URL.
 async function standup(): Promise<string> {
-  process.env.TOKEN_STORE_PATH = join(tmpdir(), `tools-dcr-${process.pid}-${open.length}.json`);
+  process.env.TOKEN_STORE_PATH = join(dcrTempDir, `tokens-${open.length}.json`);
   const port = await freePort();
   const base = `http://localhost:${port}`;
   process.env.MCP_BASE_URL = base;
