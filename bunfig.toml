@@ -8,3 +8,6 @@ minimumReleaseAge = 259200
 exact = true
 frozenLockfile = true
 saveTextLockfile = true
+
+[test]
+preload = ["./test/setup.ts"]

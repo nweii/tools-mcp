@@ -8,7 +8,8 @@
   "scripts": {
     "start": "bun run src/server.ts",
     "dev": "bun --watch run src/server.ts",
-    "test": "TOOLS_MCP_TEST=1 bun test",
+    "test": "bun test",
+    "test:token-isolation": "bun run test/token-store-isolation.check.ts",
     "typecheck": "tsc --noEmit",
     "audit": "bun audit"
   },
