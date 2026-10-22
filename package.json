@@ -14,14 +14,14 @@
     "audit": "bun audit"
   },
   "dependencies": {
-    "@modelcontextprotocol/server": "2.0.0",
+    "@modelcontextprotocol/server": "2.3.1",
     "@steipete/bird": "^0.8.0",
-    "express": "^4.21.2",
-    "mcp-server-kit": "git+https://github.com/nweii/mcp-server-kit.git#b905680cff757a132d074022ac991d7ce509327a",
+    "express": "^4.22.3",
+    "mcp-server-kit": "git+https://github.com/nweii/mcp-server-kit.git#a8b4b1f43eca67585551dc5a5033b6c577d58bb8",
     "zod": "4.2.0"
   },
   "devDependencies": {
-    "@modelcontextprotocol/client": "2.0.0",
+    "@modelcontextprotocol/client": "2.3.1",
     "@types/express": "^5.0.1",
     "@types/node": "^22.0.0",
     "bun-types": "^1.1.0",

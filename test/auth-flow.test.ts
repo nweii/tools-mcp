@@ -102,7 +102,7 @@ test('GET /authorize renders the approval page for valid params', async () => {
   const url = `${base}/authorize?response_type=code&client_id=test-client&redirect_uri=${encodeURIComponent(REDIRECT)}&code_challenge=${challenge}&code_challenge_method=S256`;
   const res = await fetch(url);
   expect(res.status).toBe(200);
-  expect(await res.text()).toContain('Approve');
+  expect(await res.text()).toContain('Allow access');
 });
 
 test('DCR registers an allowed public client', async () => {
