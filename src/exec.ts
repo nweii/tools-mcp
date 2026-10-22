@@ -1,6 +1,4 @@
 // ABOUTME: Subprocess runner for wrapped CLIs — captures stdout/stderr, applies a timeout, and surfaces non-zero exits as actionable errors.
-import { spawn } from 'child_process';
-
 export interface RunResult {
   stdout: string;
   stderr: string;
@@ -27,36 +25,40 @@ export class CliError extends Error {
   }
 }
 
-export function runCli(cmd: string, args: readonly string[], opts: RunOptions = {}): Promise<RunResult> {
+export async function runCli(cmd: string, args: readonly string[], opts: RunOptions = {}): Promise<RunResult> {
   const timeoutMs = opts.timeoutMs ?? 30_000;
 
-  return new Promise((resolve, reject) => {
-    const child = spawn(cmd, args, {
+  // Bun.spawn rather than node:child_process: under Bun on macOS the compat layer's 'close'
+  // event occasionally never fires for a fast-exiting child, which hangs the call until timeout.
+  let child: ReturnType<typeof Bun.spawn<'ignore', 'pipe', 'pipe'>>;
+  try {
+    child = Bun.spawn([cmd, ...args], {
       env: { ...process.env, ...opts.env, NO_COLOR: '1' },
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdin: 'ignore',
+      stdout: 'pipe',
+      stderr: 'pipe',
     });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new CliError(cmd, args, null, '', '', `Failed to spawn ${cmd}: ${message}`);
+  }
 
-    let stdout = '';
-    let stderr = '';
-    child.stdout?.on('data', (d) => (stdout += d.toString()));
-    child.stderr?.on('data', (d) => (stderr += d.toString()));
-
-    const killer = setTimeout(() => {
+  let killer: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    killer = setTimeout(() => {
       child.kill('SIGKILL');
-      reject(new CliError(cmd, args, null, stdout, stderr, `${cmd} timed out after ${timeoutMs}ms`));
+      reject(new CliError(cmd, args, null, '', '', `${cmd} timed out after ${timeoutMs}ms`));
     }, timeoutMs);
-
-    child.on('error', (err) => {
-      clearTimeout(killer);
-      reject(new CliError(cmd, args, null, stdout, stderr, `Failed to spawn ${cmd}: ${err.message}`));
-    });
-
-    child.on('close', (code) => {
-      clearTimeout(killer);
-      if (code === 0) resolve({ stdout, stderr });
-      else reject(new CliError(cmd, args, code, stdout, stderr));
-    });
   });
+  const output = Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+
+  const [stdout, stderr, code] = await Promise.race([output, timeout]).finally(() => clearTimeout(killer));
+  if (code !== 0) throw new CliError(cmd, args, code, stdout, stderr);
+  return { stdout, stderr };
 }
 
 /** Parse stdout as JSON, with the raw text in the error if parsing fails. */
