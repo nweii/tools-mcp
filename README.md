@@ -55,6 +55,7 @@ Because billing is on browser time, the cheapest patterns are `browser_snapshot`
 The Claude-facing OAuth surface is served by the MCP SDK (via [`mcp-server-kit`](https://github.com/nweii/mcp-server-kit)).
 
 - OAuth 2.1 + PKCE, with discovery at `/.well-known/oauth-authorization-server`, the approval page at `/authorize`, and token exchange at `/token` (compatible with Claude.ai's connector flow)
+- Sign-in can instead run through Cloudflare Access: with `MCP_AUTH=access`, `ACCESS_TEAM_DOMAIN` and `ACCESS_AUD`, an Access application with Managed OAuth signs clients in, and the server refuses any request without Access's signed JWT. The server's own OAuth routes and approval page are not mounted in that mode
 - The approval page is guarded: the server refuses to start unless one of `APPROVAL_PASSWORD` (a password on the approval page), `MCP_CLIENT_SECRET` (a secret required at token exchange), or `APPROVAL_OPEN=true` (declares an external gateway already guards `/authorize`) is set
 - Optional dynamic client registration for clients that can't be pre-configured (e.g. ChatGPT), enabled by `MCP_DCR_ENABLED`; it requires `APPROVAL_PASSWORD`
 - Static bearer token (`MCP_STATIC_BEARER_TOKEN`) for clients that bypass the browser flow

@@ -21,5 +21,5 @@ startServer({
   port: PORT,
   onListen: () => console.log(`tools-mcp listening on port ${PORT}`),
   // Persist Claude-facing tokens on clean shutdown so clients survive container restarts.
-  onShutdown: () => auth.saveTokens(),
+  onShutdown: () => auth?.saveTokens(),
 });

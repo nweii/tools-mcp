@@ -1,9 +1,10 @@
 // ABOUTME: Assembles the tools-mcp server from the shared mcp-server-kit (CORS, request logging, a
-// bearer-gated /health, the Claude-facing OAuth surface, and the stateless /mcp mount) and registers
-// the wrapped-CLI/API tool modules. createApp() returns the Express app plus the auth instance, whose
+// bearer-gated /health, the Claude-facing sign-in, and the stateless /mcp mount) and registers the
+// wrapped-CLI/API tool modules. Sign-in is the kit's own OAuth by default, or Cloudflare Access when
+// MCP_AUTH=access. createApp() returns the Express app plus the OAuth instance, if any, whose
 // saveTokens() the entry point persists on shutdown.
 import type { Express } from 'express';
-import { createApp as createKitApp, createAuth } from 'mcp-server-kit';
+import { createAccessAuth, createApp as createKitApp, createAuth } from 'mcp-server-kit';
 import type { Auth } from 'mcp-server-kit';
 import { registerAllTools } from './tools.js';
 import pkg from '../package.json' with { type: 'json' };
@@ -19,13 +20,23 @@ function getCommaList(value: string | undefined): string[] | undefined {
   return items?.length ? items : undefined;
 }
 
-// Builds the server. Returns the app and its auth instance; the entry point persists tokens via
-// auth.saveTokens() on shutdown. createAuth throws at construction when /authorize is unguarded, so a
-// misconfigured deployment fails fast rather than booting exposed.
-export function createApp(): { app: Express; auth: Auth } {
-  const testMode = process.env.TOOLS_MCP_TEST === '1';
-  const port = process.env.PORT ?? '3457';
+// MCP_AUTH=access: a Cloudflare Access application with Managed OAuth runs sign-in, and the server
+// accepts only requests carrying Access's signed JWT for ACCESS_AUD.
+function accessModeEnabled(): boolean {
+  return process.env.MCP_AUTH?.trim().toLowerCase() === 'access';
+}
 
+function createAccessMiddleware() {
+  const teamDomain = process.env.ACCESS_TEAM_DOMAIN?.trim();
+  const audience = process.env.ACCESS_AUD?.trim();
+  if (!teamDomain) throw new Error('MCP_AUTH=access requires ACCESS_TEAM_DOMAIN');
+  if (!audience) throw new Error('MCP_AUTH=access requires ACCESS_AUD');
+  return createAccessAuth({ teamDomain, audience });
+}
+
+// The kit's own OAuth. createAuth throws at construction when /authorize is unguarded, so a
+// misconfigured deployment fails fast rather than booting exposed.
+function createOAuth(port: string, testMode: boolean): Auth {
   const clientId = process.env.MCP_CLIENT_ID;
   if (!clientId) throw new Error('MCP_CLIENT_ID env var is required');
 
@@ -39,7 +50,7 @@ export function createApp(): { app: Express; auth: Auth } {
   const dcrRedirectUris = getCommaList(process.env.MCP_DCR_ALLOWED_REDIRECT_URIS);
   const dcrEnabled = /^(1|true)$/i.test(process.env.MCP_DCR_ENABLED?.trim() ?? '') || !!dcrRedirectUris?.length;
 
-  const auth = createAuth({
+  return createAuth({
     baseUrl: process.env.MCP_BASE_URL ?? `http://localhost:${port}`,
     clientId,
     displayName: process.env.MCP_SERVER_DISPLAY_NAME ?? 'tools-mcp',
@@ -56,11 +67,19 @@ export function createApp(): { app: Express; auth: Auth } {
     // it on would throttle across cases. Disabled in test only — production keeps it.
     disableRateLimit: testMode,
   });
+}
+
+// Builds the server. Returns the app and its OAuth instance (undefined in Access mode); the entry
+// point persists tokens via auth.saveTokens() on shutdown.
+export function createApp(): { app: Express; auth: Auth | undefined } {
+  const testMode = process.env.TOOLS_MCP_TEST === '1';
+  const port = process.env.PORT ?? '3457';
+  const auth = accessModeEnabled() ? undefined : createOAuth(port, testMode);
 
   const app = createKitApp({
     name: 'tools-mcp',
     version: pkg.version,
-    auth,
+    ...(auth ? { auth } : { authMiddleware: createAccessMiddleware() }),
     // Read live per /health request (the kit reads this property on each call), so an uptime
     // monitor's HEALTH_TOKEN can be set or rotated without a code change.
     get healthToken() {
